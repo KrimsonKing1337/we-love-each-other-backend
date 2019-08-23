@@ -1,4 +1,4 @@
-# node.js express and sqlite
+# we-love-each-other-backend
 Backend for we-love-each-other.ru
 
 ### Install
