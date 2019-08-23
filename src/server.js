@@ -61,7 +61,7 @@ app.get('/api/pair/:id', (req, res) => {
 
 app.post('/api/pair/', (req, res) => {
   const errors = [];
-  const { firstName, secondName, timestamp } = req.body;
+  const { firstName, secondName, date } = req.body;
 
   if (!firstName) {
     errors.push('No password specified');
@@ -71,8 +71,8 @@ app.post('/api/pair/', (req, res) => {
     errors.push('No email specified');
   }
 
-  if (!timestamp) {
-    errors.push('No timestamp specified');
+  if (!date) {
+    errors.push('No date specified');
   }
 
   if (errors.length > 0) {
@@ -81,8 +81,8 @@ app.post('/api/pair/', (req, res) => {
     return;
   }
 
-  const sql = 'INSERT INTO Pair (firstName, secondName, timestamp) VALUES (?,?,?)';
-  const params = [firstName, secondName, timestamp];
+  const sql = 'INSERT INTO Pair (firstName, secondName, date) VALUES (?,?,?)';
+  const params = [firstName, secondName, date];
 
   db.run(sql, params, function (err) {
     if (err) {
@@ -100,15 +100,15 @@ app.post('/api/pair/', (req, res) => {
 });
 
 app.patch('/api/pair/:id', (req, res) => {
-  const { firstName, secondName, timestamp } = req.body;
+  const { firstName, secondName, date } = req.body;
 
   db.run(
     `UPDATE Pair set 
            firstName = COALESCE(?, firstName), 
            secondName = COALESCE(?, secondName), 
-           timestamp = COALESCE(?, timestamp) 
+           date = COALESCE(?, date) 
            WHERE id = ?`,
-    [firstName, secondName, timestamp, req.params.id],
+    [firstName, secondName, date, req.params.id],
     function (err) {
       if (err) {
         res.status(400).json({ error: res.message });

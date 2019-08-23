@@ -16,14 +16,14 @@ const db = new sqlite3.Database(DBSOURCE, (dataBaseError) => {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             firstName text, 
             secondName text, 
-            timestamp text
+            date text
             )`,
   (runSqlError) => {
     if (runSqlError) return;
 
-    const insert = 'INSERT INTO Pair (firstName, secondName, timestamp) VALUES (?,?,?)';
+    const insert = 'INSERT INTO Pair (firstName, secondName, date) VALUES (?,?,?)';
 
-    db.run(insert, ['Олег', 'Настя', Date.parse(new Date().toString())]);
+    db.run(insert, ['Олег', 'Настя', '2019-07-24']);
   });
 });
 
