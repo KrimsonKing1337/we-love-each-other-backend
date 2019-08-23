@@ -23,7 +23,7 @@ const db = new sqlite3.Database(DBSOURCE, (dataBaseError) => {
 
     const insert = 'INSERT INTO Pair (firstName, secondName, timestamp) VALUES (?,?,?)';
 
-    db.run(insert, ['Олег', 'Настя', new Date()]);
+    db.run(insert, ['Олег', 'Настя', Date.parse(new Date().toString())]);
   });
 });
 
