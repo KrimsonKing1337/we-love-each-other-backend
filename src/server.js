@@ -18,7 +18,9 @@ app.use(bodyParser.json());
 
 // Root endpoint
 app.get('/', (req, res) => {
-  res.json({ message: 'Ok' });
+  res.json({
+    message: 'Ok',
+  });
 });
 
 // Insert here other API endpoints
@@ -29,7 +31,9 @@ app.get('/api/pairs-all', (req, res) => {
 
   db.all(sql, params, (err, rows) => {
     if (err) {
-      res.status(400).json({ error: err.message });
+      res.status(400).json({
+        error: err.message,
+      });
 
       return;
     }
@@ -47,7 +51,9 @@ app.get('/api/pair/:id', (req, res) => {
 
   db.get(sql, params, (err, row) => {
     if (err) {
-      res.status(400).json({ error: err.message });
+      res.status(400).json({
+        error: err.message,
+      });
 
       return;
     }
@@ -75,18 +81,33 @@ app.post('/api/pair/', (req, res) => {
     errors.push('No date specified');
   }
 
+  const params = [firstName, secondName, date];
+
+  for (let i = 0; i < params.length; i += 1) {
+    const paramCur = params[i];
+
+    if (paramCur.length > 255) {
+      errors.push('Request is too large');
+
+      break;
+    }
+  }
+
   if (errors.length > 0) {
-    res.status(400).json({ error: errors.join(',') });
+    res.status(400).json({
+      error: errors.join(','),
+    });
 
     return;
   }
 
   const sql = 'INSERT INTO Pair (firstName, secondName, date) VALUES (?,?,?)';
-  const params = [firstName, secondName, date];
 
   db.run(sql, params, function (err) {
     if (err) {
-      res.status(400).json({ error: err.message });
+      res.status(400).json({
+        error: err.message,
+      });
 
       return;
     }
@@ -102,16 +123,32 @@ app.post('/api/pair/', (req, res) => {
 app.patch('/api/pair/:id', (req, res) => {
   const { firstName, secondName, date } = req.body;
 
+  const params = [firstName, secondName, date];
+
+  for (let i = 0; i < params.length; i += 1) {
+    const paramCur = params[i];
+
+    if (paramCur.length > 255) {
+      res.status(400).json({
+        error: 'Request is too large',
+      });
+
+      return;
+    }
+  }
+
   db.run(
     `UPDATE Pair set 
            firstName = COALESCE(?, firstName), 
            secondName = COALESCE(?, secondName), 
            date = COALESCE(?, date) 
            WHERE id = ?`,
-    [firstName, secondName, date, req.params.id],
+    [...params, req.params.id],
     function (err) {
       if (err) {
-        res.status(400).json({ error: res.message });
+        res.status(400).json({
+          error: res.message,
+        });
 
         return;
       }
@@ -131,12 +168,17 @@ app.delete('/api/pair/:id', (req, res) => {
     req.params.id,
     function (err) {
       if (err) {
-        res.status(400).json({ error: res.message });
+        res.status(400).json({
+          error: res.message,
+        });
 
         return;
       }
 
-      res.json({ message: 'deleted', changes: this.changes });
+      res.json({
+        message: 'deleted',
+        changes: this.changes,
+      });
     },
   );
 });
