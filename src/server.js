@@ -1,6 +1,9 @@
 // Create express app
 const express = require('express');
 const bodyParser = require('body-parser');
+const uuid = require('uuid/v5');
+const fileUpload = require('express-fileupload');
+const appRoot = require('./appRoot.js');
 
 const db = require('./database.js');
 
@@ -13,8 +16,18 @@ app.listen(HTTP_PORT, () => {
   console.log(`Server running on http://localhost:${HTTP_PORT}`);
 });
 
-app.use(bodyParser.urlencoded({ extended: false }));
-app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({
+  limit: '10mb',
+  extended: true,
+  parameterLimit: 1000000,
+}));
+
+app.use(bodyParser.json({
+  limit: '10mb',
+  extended: true,
+}));
+
+app.use(fileUpload({}));
 
 // Root endpoint
 app.get('/', (req, res) => {
@@ -160,6 +173,31 @@ app.patch('/api/pair/:id', (req, res) => {
       });
     },
   );
+});
+
+app.post('/api/upload', (req, res) => {
+  const { files } = req;
+
+  if (Object.keys(files).length === 0) {
+    return res.status(400).send('No files were uploaded.');
+  }
+
+  const { file } = files;
+  const { name } = file;
+
+  file.mv(`${appRoot}/uploads/img/${name}`, (err) => {
+    if (err) {
+      console.error(err);
+
+      return res.status(500).send(err);
+    }
+
+    res.send('File uploaded!');
+  });
+});
+
+app.put('/api/pair/:id', (req, res) => {
+  console.log('put request', req);
 });
 
 app.delete('/api/pair/:id', (req, res) => {
