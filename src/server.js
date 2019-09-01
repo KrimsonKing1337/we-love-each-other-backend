@@ -29,6 +29,8 @@ app.use(bodyParser.json({
 
 app.use(fileUpload({}));
 
+app.use('/uploads', express.static(`${appRoot}/uploads`));
+
 // Root endpoint
 app.get('/', (req, res) => {
   res.json({
@@ -114,9 +116,9 @@ app.post('/api/pair/', (req, res) => {
     return;
   }
 
-  const sql = 'INSERT INTO Pair (firstName, secondName, date) VALUES (?,?,?)';
+  const sql = 'INSERT INTO Pair (firstName, secondName, date, imgSrc) VALUES (?,?,?,?)';
 
-  db.run(sql, params, function (err) {
+  db.run(sql, [...params, null], function (err) {
     if (err) {
       res.status(400).json({
         error: err.message,
@@ -134,9 +136,11 @@ app.post('/api/pair/', (req, res) => {
 });
 
 app.patch('/api/pair/:id', (req, res) => {
-  const { firstName, secondName, date } = req.body;
+  const {
+    firstName, secondName, date, imgSrc,
+  } = req.body;
 
-  const params = [firstName, secondName, date];
+  const params = [firstName, secondName, date, imgSrc];
 
   for (let i = 0; i < params.length; i += 1) {
     const paramCur = params[i];
@@ -154,7 +158,8 @@ app.patch('/api/pair/:id', (req, res) => {
     `UPDATE Pair set 
            firstName = COALESCE(?, firstName), 
            secondName = COALESCE(?, secondName), 
-           date = COALESCE(?, date) 
+           date = COALESCE(?, date),
+           imgSrc = COALESCE(?, imgSrc)
            WHERE id = ?`,
     [...params, req.params.id],
     function (err) {
@@ -175,7 +180,7 @@ app.patch('/api/pair/:id', (req, res) => {
   );
 });
 
-app.post('/api/upload', (req, res) => {
+app.put('/api/pair/:id', (req, res) => {
   const { files } = req;
 
   if (Object.keys(files).length === 0) {
@@ -185,19 +190,35 @@ app.post('/api/upload', (req, res) => {
   const { file } = files;
   const { name } = file;
 
-  file.mv(`${appRoot}/uploads/img/${name}`, (err) => {
-    if (err) {
-      console.error(err);
+  file.mv(`${appRoot}/uploads/img/${name}`, (fileMvErr) => {
+    if (fileMvErr) {
+      console.error(fileMvErr);
 
-      return res.status(500).send(err);
+      return res.status(500).send(fileMvErr);
     }
 
-    res.send('File uploaded!');
-  });
-});
+    db.run(
+      `UPDATE Pair set 
+           imgSrc = COALESCE(?, imgSrc)
+           WHERE id = ?`,
+      [`/uploads/img/${name}`, req.params.id],
+      function (err) {
+        if (err) {
+          res.status(400).json({
+            error: res.message,
+          });
 
-app.put('/api/pair/:id', (req, res) => {
-  console.log('put request', req);
+          return;
+        }
+
+        res.json({
+          message: 'success',
+          data: req.body,
+          changes: this.changes,
+        });
+      },
+    );
+  });
 });
 
 app.delete('/api/pair/:id', (req, res) => {
