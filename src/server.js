@@ -1,7 +1,7 @@
 // Create express app
 const express = require('express');
 const bodyParser = require('body-parser');
-const uuid = require('uuid/v5');
+const { v4 } = require('uuid');
 const fileUpload = require('express-fileupload');
 const appRoot = require('./appRoot.js');
 
@@ -189,8 +189,10 @@ app.put('/api/pair/:id', (req, res) => {
 
   const { file } = files;
   const { name } = file;
+  const uniqueKey = v4();
+  const filePath = `uploads/img/${uniqueKey}___${name}`;
 
-  file.mv(`${appRoot}/uploads/img/${name}`, (fileMvErr) => {
+  file.mv(`${appRoot}/${filePath}`, (fileMvErr) => {
     if (fileMvErr) {
       console.error(fileMvErr);
 
@@ -201,7 +203,7 @@ app.put('/api/pair/:id', (req, res) => {
       `UPDATE Pair set 
            imgSrc = COALESCE(?, imgSrc)
            WHERE id = ?`,
-      [`/uploads/img/${name}`, req.params.id],
+      [`/${filePath}`, req.params.id],
       function (err) {
         if (err) {
           res.status(400).json({
