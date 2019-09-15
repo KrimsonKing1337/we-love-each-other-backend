@@ -6,6 +6,7 @@ const fileUpload = require('express-fileupload');
 const appRoot = require('./appRoot.js');
 
 const db = require('./database.js');
+const fileAsync = require('./utils/fileAsync.js');
 
 const app = express();
 
@@ -41,43 +42,39 @@ app.get('/', (req, res) => {
 // Insert here other API endpoints
 
 app.get('/api/pairs-all', (req, res) => {
-  const sql = 'select * from Pair';
+  const sql = 'select * from pairs';
   const params = [];
 
-  db.all(sql, params, (err, rows) => {
-    if (err) {
+  db.allAsync(sql, params)
+    .then(rows => {
+      res.json({
+        message: 'success',
+        data: rows,
+      });
+    })
+    .catch(err => {
       res.status(400).json({
         error: err.message,
       });
-
-      return;
-    }
-
-    res.json({
-      message: 'success',
-      data: rows,
     });
-  });
 });
 
 app.get('/api/pair/:id', (req, res) => {
-  const sql = 'select * from Pair where id = ?';
+  const sql = 'SELECT * FROM pairs WHERE id = ?';
   const params = [req.params.id];
 
-  db.get(sql, params, (err, row) => {
-    if (err) {
+  db.getAsync(sql, params)
+    .then(rows => {
+      res.json({
+        message: 'success',
+        data: rows,
+      });
+    })
+    .catch(err => {
       res.status(400).json({
         error: err.message,
       });
-
-      return;
-    }
-
-    res.json({
-      message: 'success',
-      data: row,
     });
-  });
 });
 
 app.post('/api/pair/', (req, res) => {
@@ -116,28 +113,29 @@ app.post('/api/pair/', (req, res) => {
     return;
   }
 
-  const sql = 'INSERT INTO Pair (firstName, secondName, date, imgSrc) VALUES (?,?,?,?)';
+  const sql = 'INSERT INTO pairs (first_name, second_name, date, img_src) VALUES (?,?,?,?)';
 
-  db.run(sql, [...params, null], function (err) {
-    if (err) {
-      res.status(400).json({
-        error: err.message,
+  db.runAsync(sql, [...params, null])
+    .then(result => {
+      res.json({
+        message: 'success',
+        data: req.body,
+        id: result.lastID,
       });
-
-      return;
-    }
-
-    res.json({
-      message: 'success',
-      data: req.body,
-      id: this.lastID,
+    })
+    .catch(() => {
+      res.status(400).json({
+        error: res.message,
+      });
     });
-  });
 });
 
 app.patch('/api/pair/:id', (req, res) => {
   const {
-    firstName, secondName, date, imgSrc,
+    firstName,
+    secondName,
+    date,
+    imgSrc,
   } = req.body;
 
   const params = [firstName, secondName, date, imgSrc];
@@ -154,94 +152,81 @@ app.patch('/api/pair/:id', (req, res) => {
     }
   }
 
-  db.run(
-    `UPDATE Pair set 
-           firstName = COALESCE(?, firstName), 
-           secondName = COALESCE(?, secondName), 
+  const sql = `UPDATE pairs set 
+           first_name = COALESCE(?, firstName), 
+           second_name = COALESCE(?, secondName), 
            date = COALESCE(?, date),
-           imgSrc = COALESCE(?, imgSrc)
-           WHERE id = ?`,
-    [...params, req.params.id],
-    function (err) {
-      if (err) {
-        res.status(400).json({
-          error: res.message,
-        });
+           img_src = COALESCE(?, imgSrc)
+           WHERE id = ?`;
 
-        return;
-      }
-
+  db.runAsync(sql, [...params, req.params.id])
+    .then(result => {
       res.json({
         message: 'success',
         data: req.body,
-        changes: this.changes,
+        changes: result.changes,
       });
-    },
-  );
+    })
+    .catch(() => {
+      res.status(400).json({
+        error: res.message,
+      });
+    });
 });
 
-app.put('/api/pair/:id', (req, res) => {
+app.put('/api/pair/:id', async (req, res) => {
   const { files } = req;
 
   if (Object.keys(files).length === 0) {
     return res.status(400).send('No files were uploaded.');
   }
 
-  const { file } = files;
+  let { file } = files;
+  file = fileAsync(file);
   const { name } = file;
   const uniqueKey = v4();
   const filePath = `uploads/img/${uniqueKey}___${name}`;
 
-  file.mv(`${appRoot}/${filePath}`, (fileMvErr) => {
-    if (fileMvErr) {
-      console.error(fileMvErr);
+  try {
+    await file.mvAsync(`${appRoot}/${filePath}`);
+  } catch (fileMvErr) {
+    console.error(fileMvErr);
 
-      return res.status(500).send(fileMvErr);
-    }
+    return res.status(500).send(fileMvErr);
+  }
 
-    db.run(
-      `UPDATE Pair set 
-           imgSrc = COALESCE(?, imgSrc)
-           WHERE id = ?`,
-      [`/${filePath}`, req.params.id],
-      function (err) {
-        if (err) {
-          res.status(400).json({
-            error: res.message,
-          });
+  const sql = `UPDATE pairs set 
+           img_src = COALESCE(?, imgSrc)
+           WHERE id = ?`;
 
-          return;
-        }
-
-        res.json({
-          message: 'success',
-          data: req.body,
-          changes: this.changes,
-        });
-      },
-    );
-  });
+  db.runAsync(sql, [`/${filePath}`, req.params.id])
+    .then(result => {
+      res.json({
+        message: 'success',
+        data: req.body,
+        changes: result.changes,
+      });
+    })
+    .catch(() => {
+      res.status(400).json({
+        error: res.message,
+      });
+    });
 });
 
 app.delete('/api/pair/:id', (req, res) => {
-  db.run(
-    'DELETE FROM Pair WHERE id = ?',
-    req.params.id,
-    function (err) {
-      if (err) {
-        res.status(400).json({
-          error: res.message,
-        });
-
-        return;
-      }
-
+  db.runAsync('DELETE FROM pairs WHERE id = ?', req.params.id)
+    .then(result => {
       res.json({
         message: 'deleted',
-        changes: this.changes,
+        changes: result.changes,
       });
-    },
-  );
+    })
+    .catch(() => {
+      res.status(400).json({
+        error: res.message,
+      });
+    });
 });
 
 // Default response for any other request

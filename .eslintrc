@@ -15,6 +15,7 @@
   "rules": {
     "no-console": "off",
     "func-names": "off",
-    "consistent-return": "off"
+    "consistent-return": "off",
+    "arrow-parens": ["error", "as-needed"]
   }
 }
