@@ -3,10 +3,11 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const { v4 } = require('uuid');
 const fileUpload = require('express-fileupload');
-const appRoot = require('./appRoot.js');
+const appRoot = require('./utils/appRoot.js');
 
 const db = require('./database.js');
 const fileAsync = require('./utils/fileAsync.js');
+const getImgLastFolder = require('./utils/imgLastFolder.js');
 
 const app = express();
 
@@ -153,10 +154,10 @@ app.patch('/api/pair/:id', (req, res) => {
   }
 
   const sql = `UPDATE pairs set 
-           first_name = COALESCE(?, firstName), 
-           second_name = COALESCE(?, secondName), 
+           first_name = COALESCE(?, first_name), 
+           second_name = COALESCE(?, second_name), 
            date = COALESCE(?, date),
-           img_src = COALESCE(?, imgSrc)
+           img_src = COALESCE(?, img_src)
            WHERE id = ?`;
 
   db.runAsync(sql, [...params, req.params.id])
@@ -181,22 +182,33 @@ app.put('/api/pair/:id', async (req, res) => {
     return res.status(400).send('No files were uploaded.');
   }
 
+  let imgLastFolder = '';
+
+  try {
+    imgLastFolder = await getImgLastFolder();
+  } catch (err) {
+    console.error(err);
+
+    return res.status(500).send(err);
+  }
+
   let { file } = files;
   file = fileAsync(file);
   const { name } = file;
+  const ext = name.split('.').pop();
   const uniqueKey = v4();
-  const filePath = `uploads/img/${uniqueKey}___${name}`;
+  const filePath = `uploads/img/${imgLastFolder}/${uniqueKey}.${ext}`;
 
   try {
     await file.mvAsync(`${appRoot}/${filePath}`);
   } catch (fileMvErr) {
-    console.error(fileMvErr);
+    console.error('fileMvErr', fileMvErr);
 
     return res.status(500).send(fileMvErr);
   }
 
   const sql = `UPDATE pairs set 
-           img_src = COALESCE(?, imgSrc)
+           img_src = COALESCE(?, img_src)
            WHERE id = ?`;
 
   db.runAsync(sql, [`/${filePath}`, req.params.id])

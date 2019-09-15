@@ -19,7 +19,7 @@ function dbAsync(db) {
     const self = this;
 
     return new Promise(((resolve, reject) => {
-      self.run(sql, params, err => {
+      self.run(sql, params, function (err) {
         if (err) {
           reject(err);
         } else {

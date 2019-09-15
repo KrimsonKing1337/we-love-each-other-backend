@@ -1,5 +1,6 @@
 const { v4 } = require('uuid');
 const sqlite3 = require('sqlite3').verbose();
+const fs = require('fs');
 const dbAsync = require('./utils/dbAsync');
 
 const DB_SOURCE = 'db.sqlite';
@@ -35,7 +36,13 @@ const db = new sqlite3.Database(DB_SOURCE, dataBaseError => {
 
       const sql = 'INSERT INTO img_last_folder (path) VALUES (?)';
 
-      db.run(sql, [v4()]);
+      const imgLastFolderPath = v4();
+
+      db.run(sql, [imgLastFolderPath], err => {
+        if (err) return;
+
+        fs.mkdirSync(`uploads/img/${imgLastFolderPath}`);
+      });
     });
 });
 
