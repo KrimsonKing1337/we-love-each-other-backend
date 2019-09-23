@@ -3,11 +3,13 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const { v4 } = require('uuid');
 const fileUpload = require('express-fileupload');
+
 const appRoot = require('./utils/appRoot.js');
 
 const db = require('./database.js');
 const fileAsync = require('./utils/fileAsync.js');
 const getImgLastFolder = require('./utils/imgLastFolder.js');
+const { objectChangeCase, arrayChangeCase } = require('./utils/collectionChangeCase.js');
 
 const app = express();
 
@@ -48,9 +50,11 @@ app.get('/api/pairs-all', (req, res) => {
 
   db.allAsync(sql, params)
     .then(rows => {
+      const camelCaseRows = arrayChangeCase(rows);
+
       res.json({
         message: 'success',
-        data: rows,
+        data: camelCaseRows,
       });
     })
     .catch(err => {
@@ -66,9 +70,11 @@ app.get('/api/pair/:id', (req, res) => {
 
   db.getAsync(sql, params)
     .then(rows => {
+      const camelCaseRows = objectChangeCase(rows);
+
       res.json({
         message: 'success',
-        data: rows,
+        data: camelCaseRows,
       });
     })
     .catch(err => {
@@ -142,9 +148,13 @@ app.patch('/api/pair/:id', (req, res) => {
   const params = [firstName, secondName, date, imgSrc];
 
   for (let i = 0; i < params.length; i += 1) {
-    const paramCur = params[i];
+    let paramCur = params[i];
 
-    if (paramCur.length > 255) {
+    if (typeof paramCur !== 'string') {
+      paramCur = undefined;
+    }
+
+    if (paramCur && paramCur.length > 255) {
       res.status(400).json({
         error: 'Request is too large',
       });
