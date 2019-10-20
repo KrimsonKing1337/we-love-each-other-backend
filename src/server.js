@@ -188,8 +188,8 @@ app.patch('/api/pair/:id', (req, res) => {
 app.put('/api/pair/:id', async (req, res) => {
   const { files } = req;
 
-  if (Object.keys(files).length === 0) {
-    return res.status(400).send('No files were uploaded.');
+  if (!files || Object.keys(files).length === 0) {
+    return res.status(200).send('There were no files to upload');
   }
 
   let imgLastFolder = '';
